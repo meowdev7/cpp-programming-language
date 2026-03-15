@@ -2,6 +2,21 @@
 #include "error.h"
 
 #include <iostream>
+#include <iomanip>
+
+std::string formatNumber(double value)
+{
+    std::string s = std::to_string(value);
+    // Remove trailing zeros but keep at least one decimal place if it's a float
+    while (!s.empty() && s.back() == '0' && s.find('.') != std::string::npos) {
+        s.pop_back();
+    }
+    // If we removed the last digit after decimal, keep one zero
+    if (!s.empty() && s.back() == '.') {
+        s.push_back('0');
+    }
+    return s;
+}
 
 void checkType(const std::string& declared, const Value& value)
 {
@@ -60,11 +75,19 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
 
         double a = std::stod(left.value);
         double b = std::stod(right.value);
+        double result;
 
-        if (bin->op == "+") return {"number", std::to_string(a + b)};
-        if (bin->op == "-") return {"number", std::to_string(a - b)};
-        if (bin->op == "*") return {"number", std::to_string(a * b)};
-        if (bin->op == "/") return {"number", std::to_string(a / b)};
+        if (bin->op == "+") result = a + b;
+        else if (bin->op == "-") result = a - b;
+        else if (bin->op == "*") result = a * b;
+        else if (bin->op == "/") result = a / b;
+        else { error(0,0,"Unknown operator"); exit(1); }
+
+        // Format: show as integer if whole number, otherwise as float
+        if (result == static_cast<long long>(result))
+            return {"number", std::to_string(static_cast<long long>(result))};
+        else
+            return {"number", formatNumber(result)};
     }
 
     error(0,0,"Unknown expression");
@@ -81,6 +104,13 @@ void executeStatement(Interpreter &interp, Statement *stmt)
 
         interp.variables[var->name] = value;
 
+        return;
+    }
+
+    if (auto print = dynamic_cast<PrintStatement *>(stmt))
+    {
+        Value value = evaluateExpression(interp, print->value.get());
+        std::cout << value.value << std::endl;
         return;
     }
 

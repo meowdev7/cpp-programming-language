@@ -78,6 +78,12 @@ Statement* parseStatement(Parser &p)
         return parseVariableDeclaration(p);
     }
 
+    // Detect print statement
+    if (t.type == TokenType::Identifier && t.value == "print")
+    {
+        return parsePrintStatement(p);
+    }
+
     // FIX: Advance past unknown token to prevent infinite loop
     error(t.line, t.column, "Unknown statement");
     advance(p);
@@ -117,6 +123,36 @@ Statement* parseVariableDeclaration(Parser &p)
     return node;
 }
 
+Statement* parsePrintStatement(Parser &p)
+{
+    advance(p);  // skip "print"
+    
+    consume(
+        p,
+        TokenType::LeftParen,
+        "Expected '(' after 'print'"
+    );
+    
+    Expression* value = parseExpression(p);
+    
+    consume(
+        p,
+        TokenType::RightParen,
+        "Expected ')' after expression"
+    );
+    
+    consume(
+        p,
+        TokenType::Semicolon,
+        "Expected ';' after print statement"
+    );
+    
+    auto* node = new PrintStatement();
+    node->value.reset(value);
+    
+    return node;
+}
+
 Expression* parseExpression(Parser &p)
 {
     return parseBinaryExpression(p);
@@ -128,7 +164,8 @@ Expression* parseBinaryExpression(Parser &p)
 
     while (isOperator(current(p).type))
     {
-        Token op = advance(p);
+        Token op = current(p);  // Get current operator before advancing
+        advance(p);  // Advance to right operand
 
         Expression* right = parsePrimary(p);
 

@@ -18,6 +18,7 @@ Program parseProgram(Parser &p);
 
 Statement* parseStatement(Parser &p);
 Statement* parseVariableDeclaration(Parser &p);
+Statement* parsePrintStatement(Parser &p);
 
 Expression* parseExpression(Parser &p);
 Expression* parseBinaryExpression(Parser &p);

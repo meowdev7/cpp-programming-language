@@ -46,6 +46,11 @@ struct VariableDeclaration : Statement
     std::unique_ptr<Expression> value;
 };
 
+struct PrintStatement : Statement
+{
+    std::unique_ptr<Expression> value;
+};
+
 struct Program : Node
 {
     std::vector<std::unique_ptr<Statement>> statements;
