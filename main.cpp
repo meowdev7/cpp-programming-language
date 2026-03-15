@@ -5,6 +5,7 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "interpreter.h"
 
 int main(int argc, char **argv)
 {
@@ -41,7 +42,9 @@ int main(int argc, char **argv)
 
     Program program = parseProgram(parser);
 
-    std::cout << "Parsing completed.\n";
+    Interpreter interp;
+
+    executeProgram(interp, program);
 
     return 0;
 }

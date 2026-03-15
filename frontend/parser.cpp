@@ -33,8 +33,11 @@ bool match(Parser &p, TokenType type)
 
 Token consume(Parser& p, TokenType type, const std::string& msg)
 {
-    if (current(p).type == type)
-        return advance(p);
+    if (current(p).type == type) {
+        Token token = current(p);  // Capture current token before advancing
+        advance(p);  // Then advance to next position
+        return token;  // Return the captured token
+    }
 
     error(current(p).line, current(p).column, msg);
     exit(1);
@@ -75,13 +78,16 @@ Statement* parseStatement(Parser &p)
         return parseVariableDeclaration(p);
     }
 
+    // FIX: Advance past unknown token to prevent infinite loop
     error(t.line, t.column, "Unknown statement");
+    advance(p);
     return nullptr;
 }
 
 Statement* parseVariableDeclaration(Parser &p)
 {
-    Token typeToken = advance(p);
+    Token typeToken = current(p);  // Get current token (the type), don't advance yet
+    advance(p);  // Now advance to get the variable name
 
     Token nameToken = consume(
         p,
