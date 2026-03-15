@@ -22,6 +22,9 @@ enum class TokenType
     TypeString,
     TypeBool,
 
+    True,
+    False,
+
     Plus,
     Minus,
     Star,

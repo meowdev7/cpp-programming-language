@@ -118,6 +118,9 @@ Token makeIdentifier(Lexer &lexer)
     if (value == "string") return makeToken(lexer, TokenType::TypeString, value);
     if (value == "bool") return makeToken(lexer, TokenType::TypeBool, value);
 
+    if (value == "true") return makeToken(lexer, TokenType::True, value);
+    if (value == "false") return makeToken(lexer, TokenType::False, value);
+
     return makeToken(lexer, TokenType::Identifier, value);
 }
 
@@ -170,6 +173,9 @@ std::string tokenTypeToString(TokenType type)
         case TokenType::TypeFloat: return "TYPE_FLOAT";
         case TokenType::TypeString: return "TYPE_STRING";
         case TokenType::TypeBool: return "TYPE_BOOL";
+
+        case TokenType::True: return "TRUE";
+        case TokenType::False: return "FALSE";
 
         case TokenType::Plus: return "PLUS";
         case TokenType::Minus: return "MINUS";

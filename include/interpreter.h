@@ -4,9 +4,16 @@
 #include <string>
 #include "ast.h"
 
+enum class ValueType
+{
+    Number,
+    String,
+    Bool
+};
+
 struct Value
 {
-    std::string type;
+    ValueType type;
     std::string value;
 };
 

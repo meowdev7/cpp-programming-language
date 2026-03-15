@@ -57,6 +57,11 @@ bool isOperator(TokenType type)
            type == TokenType::LessEqual;
 }
 
+// Forward declarations for precedence levels
+Expression* parseComparison(Parser &p);
+Expression* parseTerm(Parser &p);
+Expression* parseFactor(Parser &p);
+
 Program parseProgram(Parser &p)
 {
     Program program;
@@ -164,14 +169,68 @@ Expression* parseExpression(Parser &p)
     return parseBinaryExpression(p);
 }
 
-Expression* parseBinaryExpression(Parser &p)
+// Parse comparison operators (lowest precedence)
+Expression* parseComparison(Parser &p)
+{
+    Expression* left = parseTerm(p);
+
+    while (current(p).type == TokenType::EqualEqual ||
+           current(p).type == TokenType::BangEqual ||
+           current(p).type == TokenType::Greater ||
+           current(p).type == TokenType::Less ||
+           current(p).type == TokenType::GreaterEqual ||
+           current(p).type == TokenType::LessEqual)
+    {
+        Token op = current(p);
+        advance(p);
+
+        Expression* right = parseTerm(p);
+
+        auto* expr = new BinaryExpression();
+        expr->left.reset(left);
+        expr->op = op.value;
+        expr->right.reset(right);
+
+        left = expr;
+    }
+
+    return left;
+}
+
+// Parse addition/subtraction (higher than comparison)
+Expression* parseTerm(Parser &p)
+{
+    Expression* left = parseFactor(p);
+
+    while (current(p).type == TokenType::Plus ||
+           current(p).type == TokenType::Minus)
+    {
+        Token op = current(p);
+        advance(p);
+
+        Expression* right = parseFactor(p);
+
+        auto* expr = new BinaryExpression();
+        expr->left.reset(left);
+        expr->op = op.value;
+        expr->right.reset(right);
+
+        left = expr;
+    }
+
+    return left;
+}
+
+// Parse multiplication/division (highest arithmetic precedence)
+Expression* parseFactor(Parser &p)
 {
     Expression* left = parsePrimary(p);
 
-    while (isOperator(current(p).type))
+    while (current(p).type == TokenType::Star ||
+           current(p).type == TokenType::Slash)
     {
-        Token op = current(p);  // Get current operator before advancing
-        advance(p);  // Advance to right operand
+        Token op = current(p);
+        advance(p);
 
         Expression* right = parsePrimary(p);
 
@@ -184,6 +243,11 @@ Expression* parseBinaryExpression(Parser &p)
     }
 
     return left;
+}
+
+Expression* parseBinaryExpression(Parser &p)
+{
+    return parseComparison(p);
 }
 
 Expression* parsePrimary(Parser &p)
@@ -208,17 +272,16 @@ Expression* parsePrimary(Parser &p)
         return node;
     }
 
+    if (t.type == TokenType::True || t.type == TokenType::False)
+    {
+        advance(p);
+        auto* node = new BooleanLiteral();
+        node->value = (t.type == TokenType::True);
+        return node;
+    }
+
     if (t.type == TokenType::Identifier)
     {
-        // Check for boolean literals
-        if (t.value == "true" || t.value == "false")
-        {
-            advance(p);
-            auto* node = new BooleanLiteral();
-            node->value = (t.value == "true");
-            return node;
-        }
-
         advance(p);
 
         auto* node = new Identifier();

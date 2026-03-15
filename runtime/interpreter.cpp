@@ -22,7 +22,7 @@ void checkType(const std::string& declared, const Value& value)
 {
     if (declared == "int" || declared == "float")
     {
-        if (value.type != "number")
+        if (value.type != ValueType::Number)
         {
             error(0,0,"Type error: expected number");
             exit(1);
@@ -31,7 +31,7 @@ void checkType(const std::string& declared, const Value& value)
 
     if (declared == "string")
     {
-        if (value.type != "string")
+        if (value.type != ValueType::String)
         {
             error(0,0,"Type error: expected string");
             exit(1);
@@ -43,17 +43,17 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
 {
     if (auto num = dynamic_cast<NumberLiteral *>(expr))
     {
-        return {"number", num->value};
+        return {ValueType::Number, num->value};
     }
 
     if (auto str = dynamic_cast<StringLiteral *>(expr))
     {
-        return {"string", str->value};
+        return {ValueType::String, str->value};
     }
 
     if (auto b = dynamic_cast<BooleanLiteral *>(expr))
     {
-        return {"bool", b->value ? "true" : "false"};
+        return {ValueType::Bool, b->value ? "true" : "false"};
     }
 
     if (auto id = dynamic_cast<Identifier *>(expr))
@@ -85,7 +85,7 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
 
             bool result = false;
 
-            if (left.type == "number")
+            if (left.type == ValueType::Number)
             {
                 double a = std::stod(left.value);
                 double b = std::stod(right.value);
@@ -97,18 +97,18 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
                 else if (bin->op == ">=") result = (a >= b);
                 else if (bin->op == "<=") result = (a <= b);
             }
-            else if (left.type == "string")
+            else if (left.type == ValueType::String)
             {
                 if (bin->op == "==") result = (left.value == right.value);
                 else if (bin->op == "!=") result = (left.value != right.value);
                 else { error(0,0,"Cannot use comparison on strings"); exit(1); }
             }
 
-            return {"bool", result ? "true" : "false"};
+            return {ValueType::Bool, result ? "true" : "false"};
         }
 
         // Arithmetic operators
-        if (left.type != "number" || right.type != "number")
+        if (left.type != ValueType::Number || right.type != ValueType::Number)
         {
             error(0,0,"Arithmetic requires numbers");
             exit(1);
@@ -126,9 +126,9 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
 
         // Format: show as integer if whole number, otherwise as float
         if (result == static_cast<long long>(result))
-            return {"number", std::to_string(static_cast<long long>(result))};
+            return {ValueType::Number, std::to_string(static_cast<long long>(result))};
         else
-            return {"number", formatNumber(result)};
+            return {ValueType::Number, formatNumber(result)};
     }
 
     error(0,0,"Unknown expression");
