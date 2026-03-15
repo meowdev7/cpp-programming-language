@@ -11,3 +11,6 @@ bool k = x > 5;
 // print(z);
 // print(k);
 
+if (y < x) {
+    print("true");
+}

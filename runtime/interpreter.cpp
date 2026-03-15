@@ -174,6 +174,26 @@ void executeStatement(Interpreter &interp, Statement *stmt)
         return;
     }
 
+    if (auto ifStmt = dynamic_cast<IfStatement *>(stmt))
+    {
+        Value cond = evaluateExpression(interp, ifStmt->condition.get());
+        
+        if (cond.type != ValueType::Bool)
+        {
+            error(0,0,"Condition must be boolean");
+            exit(1);
+        }
+        
+        if (std::get<bool>(cond.data))
+        {
+            for (auto& stmt : ifStmt->body)
+            {
+                executeStatement(interp, stmt.get());
+            }
+        }
+        return;
+    }
+
     error(0,0,"Unknown statement");
     exit(1);
 }

@@ -95,6 +95,12 @@ Statement* parseStatement(Parser &p)
         return parsePrintStatement(p);
     }
 
+    // Detect if statement
+    if ((t.type == TokenType::Identifier && t.value == "if") || t.type == TokenType::If)
+    {
+        return parseIfStatement(p);
+    }
+
     // FIX: Advance past unknown token to prevent infinite loop
     error(t.line, t.column, "Unknown statement");
     advance(p);
@@ -160,6 +166,53 @@ Statement* parsePrintStatement(Parser &p)
     
     auto* node = new PrintStatement();
     node->value.reset(value);
+    
+    return node;
+}
+
+Statement* parseIfStatement(Parser &p)
+{
+    advance(p);  // skip "if"
+    
+    consume(
+        p,
+        TokenType::LeftParen,
+        "Expected '(' after 'if'"
+    );
+    
+    Expression* condition = parseExpression(p);
+    
+    consume(
+        p,
+        TokenType::RightParen,
+        "Expected ')' after condition"
+    );
+    
+    consume(
+        p,
+        TokenType::LeftBrace,
+        "Expected '{' after condition"
+    );
+    
+    // Parse body statements until }
+    std::vector<std::unique_ptr<Statement>> body;
+    while (current(p).type != TokenType::RightBrace)
+    {
+        Statement* stmt = parseStatement(p);
+        if (stmt)
+            body.emplace_back(stmt);
+    }
+    
+    consume(
+        p,
+        TokenType::RightBrace,
+        "Expected '}' after if body"
+    );
+    
+    auto* node = new IfStatement();
+    node->condition.reset(condition);
+    for (auto& s : body)
+        node->body.emplace_back(std::move(s));
     
     return node;
 }
