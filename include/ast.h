@@ -27,6 +27,11 @@ struct StringLiteral : Expression
     std::string value;
 };
 
+struct BooleanLiteral : Expression
+{
+    bool value;
+};
+
 struct Identifier : Expression
 {
     std::string name;

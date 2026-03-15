@@ -48,7 +48,13 @@ bool isOperator(TokenType type)
     return type == TokenType::Plus ||
            type == TokenType::Minus ||
            type == TokenType::Star ||
-           type == TokenType::Slash;
+           type == TokenType::Slash ||
+           type == TokenType::EqualEqual ||
+           type == TokenType::BangEqual ||
+           type == TokenType::Greater ||
+           type == TokenType::Less ||
+           type == TokenType::GreaterEqual ||
+           type == TokenType::LessEqual;
 }
 
 Program parseProgram(Parser &p)
@@ -204,6 +210,15 @@ Expression* parsePrimary(Parser &p)
 
     if (t.type == TokenType::Identifier)
     {
+        // Check for boolean literals
+        if (t.value == "true" || t.value == "false")
+        {
+            advance(p);
+            auto* node = new BooleanLiteral();
+            node->value = (t.value == "true");
+            return node;
+        }
+
         advance(p);
 
         auto* node = new Identifier();

@@ -51,6 +51,11 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
         return {"string", str->value};
     }
 
+    if (auto b = dynamic_cast<BooleanLiteral *>(expr))
+    {
+        return {"bool", b->value ? "true" : "false"};
+    }
+
     if (auto id = dynamic_cast<Identifier *>(expr))
     {
         if (interp.variables.count(id->name) == 0)
@@ -67,6 +72,42 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
         Value left = evaluateExpression(interp, bin->left.get());
         Value right = evaluateExpression(interp, bin->right.get());
 
+        // Comparison operators
+        if (bin->op == "==" || bin->op == "!=" || bin->op == ">" || 
+            bin->op == "<" || bin->op == ">=" || bin->op == "<=")
+        {
+            // For comparisons, both must be same type
+            if (left.type != right.type)
+            {
+                error(0,0,"Cannot compare different types");
+                exit(1);
+            }
+
+            bool result = false;
+
+            if (left.type == "number")
+            {
+                double a = std::stod(left.value);
+                double b = std::stod(right.value);
+
+                if (bin->op == "==") result = (a == b);
+                else if (bin->op == "!=") result = (a != b);
+                else if (bin->op == ">") result = (a > b);
+                else if (bin->op == "<") result = (a < b);
+                else if (bin->op == ">=") result = (a >= b);
+                else if (bin->op == "<=") result = (a <= b);
+            }
+            else if (left.type == "string")
+            {
+                if (bin->op == "==") result = (left.value == right.value);
+                else if (bin->op == "!=") result = (left.value != right.value);
+                else { error(0,0,"Cannot use comparison on strings"); exit(1); }
+            }
+
+            return {"bool", result ? "true" : "false"};
+        }
+
+        // Arithmetic operators
         if (left.type != "number" || right.type != "number")
         {
             error(0,0,"Arithmetic requires numbers");

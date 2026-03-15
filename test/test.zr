@@ -1,7 +1,12 @@
 int x = 10;
 float y = 3.141;
 string name = "Soulyyyy";
+bool z = true;
+bool k = x > 5;
 
 print(name);
 print(y);
 print(y+5); print(x + 2);
+print(x >= y);
+print(z);
+print(k);
