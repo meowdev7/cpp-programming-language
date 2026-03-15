@@ -13,4 +13,5 @@ bool k = x > 5;
 
 if (y < x) {
     print("true");
+    y = 5;
 }

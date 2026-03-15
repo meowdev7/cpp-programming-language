@@ -194,6 +194,20 @@ void executeStatement(Interpreter &interp, Statement *stmt)
         return;
     }
 
+    if (auto assign = dynamic_cast<AssignmentStatement *>(stmt))
+    {
+        Value value = evaluateExpression(interp, assign->value.get());
+        
+        if (interp.variables.count(assign->name) == 0)
+        {
+            error(0,0,"Undefined variable: " + assign->name);
+            exit(1);
+        }
+        
+        interp.variables[assign->name] = value;
+        return;
+    }
+
     error(0,0,"Unknown statement");
     exit(1);
 }

@@ -20,6 +20,7 @@ Statement* parseStatement(Parser &p);
 Statement* parseVariableDeclaration(Parser &p);
 Statement* parsePrintStatement(Parser &p);
 Statement* parseIfStatement(Parser &p);
+Statement* parseAssignment(Parser &p);
 
 Expression* parseExpression(Parser &p);
 Expression* parseBinaryExpression(Parser &p);

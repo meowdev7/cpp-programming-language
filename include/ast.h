@@ -37,6 +37,18 @@ struct Identifier : Expression
     std::string name;
 };
 
+struct AssignmentExpression : Expression
+{
+    std::string name;
+    std::unique_ptr<Expression> value;
+};
+
+struct AssignmentStatement : Statement
+{
+    std::string name;
+    std::unique_ptr<Expression> value;
+};
+
 struct BinaryExpression : Expression
 {
     std::unique_ptr<Expression> left;

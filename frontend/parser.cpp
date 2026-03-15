@@ -101,6 +101,22 @@ Statement* parseStatement(Parser &p)
         return parseIfStatement(p);
     }
 
+    // Detect assignment: identifier = expression
+    if (t.type == TokenType::Identifier)
+    {
+        // Look ahead to see if next token is =
+        size_t savedPos = p.position;
+        Token next = current(p);
+        advance(p);
+        Token afterNext = current(p);
+        p.position = savedPos;  // Reset position
+        
+        if (next.type == TokenType::Identifier && afterNext.type == TokenType::Equal)
+        {
+            return parseAssignment(p);
+        }
+    }
+
     // FIX: Advance past unknown token to prevent infinite loop
     error(t.line, t.column, "Unknown statement");
     advance(p);
@@ -213,6 +229,27 @@ Statement* parseIfStatement(Parser &p)
     node->condition.reset(condition);
     for (auto& s : body)
         node->body.emplace_back(std::move(s));
+    
+    return node;
+}
+
+Statement* parseAssignment(Parser &p)
+{
+    Token nameToken = current(p);
+    advance(p);  // skip variable name
+    advance(p);  // skip =
+    
+    Expression* value = parseExpression(p);
+    
+    consume(
+        p,
+        TokenType::Semicolon,
+        "Expected ';' after assignment"
+    );
+    
+    auto* node = new AssignmentStatement();
+    node->name = nameToken.value;
+    node->value.reset(value);
     
     return node;
 }
