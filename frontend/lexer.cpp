@@ -5,67 +5,19 @@
 
 #include "lexer.h"
 
-std::string tokenTypeToString(TokenType type)
-{
-    switch (type)
-    {
-    case TokenType::Identifier:
-        return "IDENTIFIER";
-    case TokenType::Number:
-        return "NUMBER";
-    case TokenType::String:
-        return "STRING";
-    case TokenType::Let:
-        return "LET";
-    case TokenType::Const:
-        return "CONST";
-    case TokenType::Function:
-        return "FUNCTION";
-    case TokenType::Return:
-        return "RETURN";
-    case TokenType::If:
-        return "IF";
-    case TokenType::Else:
-        return "ELSE";
-    case TokenType::While:
-        return "WHILE";
-    case TokenType::For:
-        return "FOR";
-    case TokenType::Plus:
-        return "PLUS";
-    case TokenType::Minus:
-        return "MINUS";
-    case TokenType::Star:
-        return "STAR";
-    case TokenType::Slash:
-        return "SLASH";
-    case TokenType::Equal:
-        return "EQUAL";
-    case TokenType::LeftParen:
-        return "LPAREN";
-    case TokenType::RightParen:
-        return "RPAREN";
-    case TokenType::LeftBrace:
-        return "LBRACE";
-    case TokenType::RightBrace:
-        return "RBRACE";
-    case TokenType::Semicolon:
-        return "SEMICOLON";
-    case TokenType::Comma:
-        return "COMMA";
-    case TokenType::EndOfFile:
-        return "EOF";
-    default:
-        return "UNKNOWN";
-    }
-}
-
 char currentChar(Lexer &lexer)
 {
     if (lexer.position >= lexer.source.size())
         return '\0';
-
     return lexer.source[lexer.position];
+}
+
+char peek(Lexer &lexer)
+{
+    size_t next = lexer.position + 1;
+    if (next >= lexer.source.size())
+        return '\0';
+    return lexer.source[next];
 }
 
 char advance(Lexer &lexer)
@@ -76,12 +28,12 @@ char advance(Lexer &lexer)
 
 bool isAlpha(char c)
 {
-    return std::isalpha(c) || c == '_';
+    return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
 }
 
 bool isDigit(char c)
 {
-    return std::isdigit(c);
+    return std::isdigit(static_cast<unsigned char>(c));
 }
 
 bool isAlphaNumeric(char c)
@@ -92,11 +44,28 @@ bool isAlphaNumeric(char c)
 Token makeNumber(Lexer &lexer)
 {
     std::string value;
+    bool hasDot = false;
 
-    while (isDigit(currentChar(lexer)))
+    while (true)
     {
-        value += currentChar(lexer);
-        advance(lexer);
+        char c = currentChar(lexer);
+
+        if (isDigit(c))
+        {
+            value += c;
+            advance(lexer);
+            continue;
+        }
+
+        if (c == '.' && !hasDot && isDigit(peek(lexer)))
+        {
+            hasDot = true;
+            value += c;
+            advance(lexer);
+            continue;
+        }
+
+        break;
     }
 
     return {TokenType::Number, value};
@@ -112,6 +81,7 @@ Token makeIdentifier(Lexer &lexer)
         advance(lexer);
     }
 
+    // Keywords
     if (value == "let")
         return {TokenType::Let, value};
     if (value == "const")
@@ -129,7 +99,124 @@ Token makeIdentifier(Lexer &lexer)
     if (value == "for")
         return {TokenType::For, value};
 
+    // Typed variables / functions
+    if (value == "int")
+        return {TokenType::TypeInt, value};
+    if (value == "float")
+        return {TokenType::TypeFloat, value};
+    if (value == "string")
+        return {TokenType::TypeString, value};
+    if (value == "bool")
+        return {TokenType::TypeBool, value};
+
     return {TokenType::Identifier, value};
+}
+
+Token makeString(Lexer &lexer)
+{
+    advance(lexer);
+
+    std::string value;
+
+    while (currentChar(lexer) != '"' && currentChar(lexer) != '\0')
+    {
+        value += currentChar(lexer);
+        advance(lexer);
+    }
+
+    if (currentChar(lexer) == '\0')
+    {
+        std::cerr << "Unterminated string literal\n";
+        return {TokenType::String, value};
+    }
+
+    advance(lexer);
+
+    return {TokenType::String, value};
+}
+
+std::string tokenTypeToString(TokenType type)
+{
+    switch (type)
+    {
+    case TokenType::Identifier:
+        return "IDENTIFIER";
+    case TokenType::Number:
+        return "NUMBER";
+    case TokenType::String:
+        return "STRING";
+
+    case TokenType::Let:
+        return "LET";
+    case TokenType::Const:
+        return "CONST";
+    case TokenType::Function:
+        return "FUNCTION";
+    case TokenType::Return:
+        return "RETURN";
+    case TokenType::If:
+        return "IF";
+    case TokenType::Else:
+        return "ELSE";
+    case TokenType::While:
+        return "WHILE";
+    case TokenType::For:
+        return "FOR";
+
+    case TokenType::TypeInt:
+        return "TYPE_INT";
+    case TokenType::TypeFloat:
+        return "TYPE_FLOAT";
+    case TokenType::TypeString:
+        return "TYPE_STRING";
+    case TokenType::TypeBool:
+        return "TYPE_BOOL";
+
+    case TokenType::Plus:
+        return "PLUS";
+    case TokenType::Minus:
+        return "MINUS";
+    case TokenType::Star:
+        return "STAR";
+    case TokenType::Slash:
+        return "SLASH";
+
+    case TokenType::Equal:
+        return "EQUAL";
+    case TokenType::EqualEqual:
+        return "EQUAL_EQUAL";
+    case TokenType::BangEqual:
+        return "BANG_EQUAL";
+
+    case TokenType::Greater:
+        return "GREATER";
+    case TokenType::Less:
+        return "LESS";
+    case TokenType::GreaterEqual:
+        return "GREATER_EQUAL";
+    case TokenType::LessEqual:
+        return "LESS_EQUAL";
+
+    case TokenType::LeftParen:
+        return "LPAREN";
+    case TokenType::RightParen:
+        return "RPAREN";
+    case TokenType::LeftBrace:
+        return "LBRACE";
+    case TokenType::RightBrace:
+        return "RBRACE";
+
+    case TokenType::Semicolon:
+        return "SEMICOLON";
+    case TokenType::Comma:
+        return "COMMA";
+
+    case TokenType::EndOfFile:
+        return "EOF";
+
+    default:
+        return "UNKNOWN";
+    }
 }
 
 std::vector<Token> lex(Lexer &lexer)
@@ -140,7 +227,7 @@ std::vector<Token> lex(Lexer &lexer)
     {
         char c = currentChar(lexer);
 
-        if (std::isspace(c))
+        if (std::isspace(static_cast<unsigned char>(c)))
         {
             advance(lexer);
             continue;
@@ -152,6 +239,41 @@ std::vector<Token> lex(Lexer &lexer)
             break;
         }
 
+        // Single line comment
+        if (c == '/' && peek(lexer) == '/')
+        {
+            while (currentChar(lexer) != '\n' && currentChar(lexer) != '\0')
+                advance(lexer);
+            continue;
+        }
+
+        // Multi-line comment
+        if (c == '/' && peek(lexer) == '*')
+        {
+            advance(lexer);
+            advance(lexer);
+
+            while (true)
+            {
+                if (currentChar(lexer) == '\0')
+                {
+                    std::cerr << "Unterminated comment\n";
+                    return tokens;
+                }
+
+                if (currentChar(lexer) == '*' && peek(lexer) == '/')
+                {
+                    advance(lexer);
+                    advance(lexer);
+                    break;
+                }
+
+                advance(lexer);
+            }
+
+            continue;
+        }
+
         if (isDigit(c))
         {
             tokens.push_back(makeNumber(lexer));
@@ -161,6 +283,12 @@ std::vector<Token> lex(Lexer &lexer)
         if (isAlpha(c))
         {
             tokens.push_back(makeIdentifier(lexer));
+            continue;
+        }
+
+        if (c == '"')
+        {
+            tokens.push_back(makeString(lexer));
             continue;
         }
 
@@ -183,7 +311,43 @@ std::vector<Token> lex(Lexer &lexer)
             break;
 
         case '=':
-            tokens.push_back({TokenType::Equal, "="});
+            if (peek(lexer) == '=')
+            {
+                advance(lexer);
+                tokens.push_back({TokenType::EqualEqual, "=="});
+            }
+            else
+                tokens.push_back({TokenType::Equal, "="});
+            break;
+
+        case '!':
+            if (peek(lexer) == '=')
+            {
+                advance(lexer);
+                tokens.push_back({TokenType::BangEqual, "!="});
+            }
+            else
+                std::cerr << "Unexpected '!'\n";
+            break;
+
+        case '>':
+            if (peek(lexer) == '=')
+            {
+                advance(lexer);
+                tokens.push_back({TokenType::GreaterEqual, ">="});
+            }
+            else
+                tokens.push_back({TokenType::Greater, ">"});
+            break;
+
+        case '<':
+            if (peek(lexer) == '=')
+            {
+                advance(lexer);
+                tokens.push_back({TokenType::LessEqual, "<="});
+            }
+            else
+                tokens.push_back({TokenType::Less, "<"});
             break;
 
         case '(':
@@ -212,6 +376,7 @@ std::vector<Token> lex(Lexer &lexer)
 
         default:
             std::cerr << "Unknown character: " << c << "\n";
+            break;
         }
 
         advance(lexer);

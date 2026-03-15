@@ -1,12 +1,13 @@
 #pragma once
-#include <vector>
 #include <string>
+#include <vector>
 
 enum class TokenType
 {
     Identifier,
     Number,
     String,
+
     Let,
     Const,
     Function,
@@ -15,17 +16,33 @@ enum class TokenType
     Else,
     While,
     For,
+
+    TypeInt,
+    TypeFloat,
+    TypeString,
+    TypeBool,
+
     Plus,
     Minus,
     Star,
     Slash,
+
     Equal,
+    EqualEqual,
+    BangEqual,
+
+    Greater,
+    Less,
+    GreaterEqual,
+    LessEqual,
+
     LeftParen,
     RightParen,
     LeftBrace,
     RightBrace,
     Semicolon,
     Comma,
+
     EndOfFile
 };
 
@@ -38,7 +55,7 @@ struct Token
 struct Lexer
 {
     std::string source;
-    int position;
+    size_t position = 0;
 };
 
 std::vector<Token> lex(Lexer &lexer);

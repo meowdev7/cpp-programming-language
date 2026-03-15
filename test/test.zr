@@ -1,45 +1,13 @@
-// Variable declarations
+// new
 
-let x = 10;
-let y = 20;
-const PI = 3;
+int x = 10;
+float y = 3.14;
+string name = "Soul";
 
-// Arithmetic expressions
-
-let sum = x + y;
-let diff = y - x;
-let product = x * y;
-let ratio = y / x;
-
-// If else usage
-
-if (sum) {
-    let result = sum + 5;
-} else {
-    let result = 0;
+function int add(int a, int b) {
+    return a + b;
 }
 
-// While loop
-
-let counter = 0;
-
-while (counter) {
-    counter = counter - 1;
+if (x >= 10) {
+    string msg = "hello";
 }
-
-// For loop 
-
-for (let i = 10; i; i = i - 1) {
-    let temp = i;
-}
-
-// Function declaration
-
-function add(a, b) {
-    let result = a + b;
-    return result;
-}
-
-// Function usage
-
-let value = add(5, 6);
