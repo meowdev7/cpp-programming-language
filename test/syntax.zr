@@ -1,0 +1,13 @@
+// new
+
+int x = 10;
+float y = 3.14;
+string name = "Soul";
+
+function int add(int a, int b) {
+    return a + b;
+}
+
+if (x >= 10) {
+    string msg = "hello";
+}

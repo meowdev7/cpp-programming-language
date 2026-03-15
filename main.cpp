@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "lexer.h"
+#include "parser.h"
 
 int main(int argc, char **argv)
 {
@@ -34,6 +35,13 @@ int main(int argc, char **argv)
         std::cout << "Token: " << token.value
                   << " (Type: " << tokenTypeToString(token.type) << ")\n";
     }
+
+    Parser parser;
+    parser.tokens = tokens;
+
+    Program program = parseProgram(parser);
+
+    std::cout << "Parsing completed.\n";
 
     return 0;
 }
