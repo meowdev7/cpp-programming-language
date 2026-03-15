@@ -22,7 +22,8 @@ char peek(Lexer &lexer)
 
 char advance(Lexer &lexer)
 {
-    lexer.position++;
+    if (lexer.position < lexer.source.size())
+        lexer.position++;
     return currentChar(lexer);
 }
 
@@ -81,56 +82,47 @@ Token makeIdentifier(Lexer &lexer)
         advance(lexer);
     }
 
-    // Keywords
-    if (value == "let")
-        return {TokenType::Let, value};
-    if (value == "const")
-        return {TokenType::Const, value};
-    if (value == "function")
-        return {TokenType::Function, value};
-    if (value == "return")
-        return {TokenType::Return, value};
-    if (value == "if")
-        return {TokenType::If, value};
-    if (value == "else")
-        return {TokenType::Else, value};
-    if (value == "while")
-        return {TokenType::While, value};
-    if (value == "for")
-        return {TokenType::For, value};
+    if (value == "let") return {TokenType::Let, value};
+    if (value == "const") return {TokenType::Const, value};
+    if (value == "function") return {TokenType::Function, value};
+    if (value == "return") return {TokenType::Return, value};
+    if (value == "if") return {TokenType::If, value};
+    if (value == "else") return {TokenType::Else, value};
+    if (value == "while") return {TokenType::While, value};
+    if (value == "for") return {TokenType::For, value};
 
-    // Typed variables / functions
-    if (value == "int")
-        return {TokenType::TypeInt, value};
-    if (value == "float")
-        return {TokenType::TypeFloat, value};
-    if (value == "string")
-        return {TokenType::TypeString, value};
-    if (value == "bool")
-        return {TokenType::TypeBool, value};
+    if (value == "int") return {TokenType::TypeInt, value};
+    if (value == "float") return {TokenType::TypeFloat, value};
+    if (value == "string") return {TokenType::TypeString, value};
+    if (value == "bool") return {TokenType::TypeBool, value};
 
     return {TokenType::Identifier, value};
 }
 
 Token makeString(Lexer &lexer)
 {
-    advance(lexer);
+    advance(lexer); // skip opening "
 
     std::string value;
 
-    while (currentChar(lexer) != '"' && currentChar(lexer) != '\0')
+    while (true)
     {
-        value += currentChar(lexer);
+        char c = currentChar(lexer);
+
+        if (c == '\0')
+        {
+            std::cerr << "Unterminated string literal\n";
+            break;
+        }
+
+        if (c == '"')
+            break;
+
+        value += c;
         advance(lexer);
     }
 
-    if (currentChar(lexer) == '\0')
-    {
-        std::cerr << "Unterminated string literal\n";
-        return {TokenType::String, value};
-    }
-
-    advance(lexer);
+    advance(lexer); // skip closing "
 
     return {TokenType::String, value};
 }
@@ -139,83 +131,48 @@ std::string tokenTypeToString(TokenType type)
 {
     switch (type)
     {
-    case TokenType::Identifier:
-        return "IDENTIFIER";
-    case TokenType::Number:
-        return "NUMBER";
-    case TokenType::String:
-        return "STRING";
+        case TokenType::Identifier: return "IDENTIFIER";
+        case TokenType::Number: return "NUMBER";
+        case TokenType::String: return "STRING";
 
-    case TokenType::Let:
-        return "LET";
-    case TokenType::Const:
-        return "CONST";
-    case TokenType::Function:
-        return "FUNCTION";
-    case TokenType::Return:
-        return "RETURN";
-    case TokenType::If:
-        return "IF";
-    case TokenType::Else:
-        return "ELSE";
-    case TokenType::While:
-        return "WHILE";
-    case TokenType::For:
-        return "FOR";
+        case TokenType::Let: return "LET";
+        case TokenType::Const: return "CONST";
+        case TokenType::Function: return "FUNCTION";
+        case TokenType::Return: return "RETURN";
+        case TokenType::If: return "IF";
+        case TokenType::Else: return "ELSE";
+        case TokenType::While: return "WHILE";
+        case TokenType::For: return "FOR";
 
-    case TokenType::TypeInt:
-        return "TYPE_INT";
-    case TokenType::TypeFloat:
-        return "TYPE_FLOAT";
-    case TokenType::TypeString:
-        return "TYPE_STRING";
-    case TokenType::TypeBool:
-        return "TYPE_BOOL";
+        case TokenType::TypeInt: return "TYPE_INT";
+        case TokenType::TypeFloat: return "TYPE_FLOAT";
+        case TokenType::TypeString: return "TYPE_STRING";
+        case TokenType::TypeBool: return "TYPE_BOOL";
 
-    case TokenType::Plus:
-        return "PLUS";
-    case TokenType::Minus:
-        return "MINUS";
-    case TokenType::Star:
-        return "STAR";
-    case TokenType::Slash:
-        return "SLASH";
+        case TokenType::Plus: return "PLUS";
+        case TokenType::Minus: return "MINUS";
+        case TokenType::Star: return "STAR";
+        case TokenType::Slash: return "SLASH";
 
-    case TokenType::Equal:
-        return "EQUAL";
-    case TokenType::EqualEqual:
-        return "EQUAL_EQUAL";
-    case TokenType::BangEqual:
-        return "BANG_EQUAL";
+        case TokenType::Equal: return "EQUAL";
+        case TokenType::EqualEqual: return "EQUAL_EQUAL";
+        case TokenType::BangEqual: return "BANG_EQUAL";
 
-    case TokenType::Greater:
-        return "GREATER";
-    case TokenType::Less:
-        return "LESS";
-    case TokenType::GreaterEqual:
-        return "GREATER_EQUAL";
-    case TokenType::LessEqual:
-        return "LESS_EQUAL";
+        case TokenType::Greater: return "GREATER";
+        case TokenType::Less: return "LESS";
+        case TokenType::GreaterEqual: return "GREATER_EQUAL";
+        case TokenType::LessEqual: return "LESS_EQUAL";
 
-    case TokenType::LeftParen:
-        return "LPAREN";
-    case TokenType::RightParen:
-        return "RPAREN";
-    case TokenType::LeftBrace:
-        return "LBRACE";
-    case TokenType::RightBrace:
-        return "RBRACE";
+        case TokenType::LeftParen: return "LPAREN";
+        case TokenType::RightParen: return "RPAREN";
+        case TokenType::LeftBrace: return "LBRACE";
+        case TokenType::RightBrace: return "RBRACE";
 
-    case TokenType::Semicolon:
-        return "SEMICOLON";
-    case TokenType::Comma:
-        return "COMMA";
+        case TokenType::Semicolon: return "SEMICOLON";
+        case TokenType::Comma: return "COMMA";
 
-    case TokenType::EndOfFile:
-        return "EOF";
-
-    default:
-        return "UNKNOWN";
+        case TokenType::EndOfFile: return "EOF";
+        default: return "UNKNOWN";
     }
 }
 
@@ -239,15 +196,17 @@ std::vector<Token> lex(Lexer &lexer)
             break;
         }
 
-        // Single line comment
+        // single line comment
         if (c == '/' && peek(lexer) == '/')
         {
             while (currentChar(lexer) != '\n' && currentChar(lexer) != '\0')
                 advance(lexer);
+
+            advance(lexer); // consume newline
             continue;
         }
 
-        // Multi-line comment
+        // multi-line comment
         if (c == '/' && peek(lexer) == '*')
         {
             advance(lexer);
@@ -294,89 +253,78 @@ std::vector<Token> lex(Lexer &lexer)
 
         switch (c)
         {
-        case '+':
-            tokens.push_back({TokenType::Plus, "+"});
-            break;
+            case '+': tokens.push_back({TokenType::Plus, "+"}); break;
+            case '-': tokens.push_back({TokenType::Minus, "-"}); break;
+            case '*': tokens.push_back({TokenType::Star, "*"}); break;
+            case '/': tokens.push_back({TokenType::Slash, "/"}); break;
 
-        case '-':
-            tokens.push_back({TokenType::Minus, "-"});
-            break;
+            case '=':
+                if (peek(lexer) == '=')
+                {
+                    advance(lexer);
+                    tokens.push_back({TokenType::EqualEqual, "=="});
+                }
+                else
+                    tokens.push_back({TokenType::Equal, "="});
+                break;
 
-        case '*':
-            tokens.push_back({TokenType::Star, "*"});
-            break;
+            case '!':
+                if (peek(lexer) == '=')
+                {
+                    advance(lexer);
+                    tokens.push_back({TokenType::BangEqual, "!="});
+                }
+                else
+                    std::cerr << "Unexpected '!'\n";
+                break;
 
-        case '/':
-            tokens.push_back({TokenType::Slash, "/"});
-            break;
+            case '>':
+                if (peek(lexer) == '=')
+                {
+                    advance(lexer);
+                    tokens.push_back({TokenType::GreaterEqual, ">="});
+                }
+                else
+                    tokens.push_back({TokenType::Greater, ">"});
+                break;
 
-        case '=':
-            if (peek(lexer) == '=')
-            {
-                advance(lexer);
-                tokens.push_back({TokenType::EqualEqual, "=="});
-            }
-            else
-                tokens.push_back({TokenType::Equal, "="});
-            break;
+            case '<':
+                if (peek(lexer) == '=')
+                {
+                    advance(lexer);
+                    tokens.push_back({TokenType::LessEqual, "<="});
+                }
+                else
+                    tokens.push_back({TokenType::Less, "<"});
+                break;
 
-        case '!':
-            if (peek(lexer) == '=')
-            {
-                advance(lexer);
-                tokens.push_back({TokenType::BangEqual, "!="});
-            }
-            else
-                std::cerr << "Unexpected '!'\n";
-            break;
+            case '(':
+                tokens.push_back({TokenType::LeftParen, "("});
+                break;
 
-        case '>':
-            if (peek(lexer) == '=')
-            {
-                advance(lexer);
-                tokens.push_back({TokenType::GreaterEqual, ">="});
-            }
-            else
-                tokens.push_back({TokenType::Greater, ">"});
-            break;
+            case ')':
+                tokens.push_back({TokenType::RightParen, ")"});
+                break;
 
-        case '<':
-            if (peek(lexer) == '=')
-            {
-                advance(lexer);
-                tokens.push_back({TokenType::LessEqual, "<="});
-            }
-            else
-                tokens.push_back({TokenType::Less, "<"});
-            break;
+            case '{':
+                tokens.push_back({TokenType::LeftBrace, "{"});
+                break;
 
-        case '(':
-            tokens.push_back({TokenType::LeftParen, "("});
-            break;
+            case '}':
+                tokens.push_back({TokenType::RightBrace, "}"});
+                break;
 
-        case ')':
-            tokens.push_back({TokenType::RightParen, ")"});
-            break;
+            case ';':
+                tokens.push_back({TokenType::Semicolon, ";"});
+                break;
 
-        case '{':
-            tokens.push_back({TokenType::LeftBrace, "{"});
-            break;
+            case ',':
+                tokens.push_back({TokenType::Comma, ","});
+                break;
 
-        case '}':
-            tokens.push_back({TokenType::RightBrace, "}"});
-            break;
-
-        case ';':
-            tokens.push_back({TokenType::Semicolon, ";"});
-            break;
-
-        case ',':
-            tokens.push_back({TokenType::Comma, ","});
-            break;
-
-        default:
-            std::cerr << "Unknown character: " << c << "\n";
-            break;
+            default:
+                std::cerr << "Unknown character: " << c << "\n";
+                break;
         }
 
         advance(lexer);
