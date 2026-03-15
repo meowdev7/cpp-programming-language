@@ -1,0 +1,1 @@
+./build/zor test/test.zr
