@@ -22,9 +22,12 @@ Statement* parsePrintStatement(Parser &p);
 Statement* parseIfStatement(Parser &p);
 Statement* parseAssignment(Parser &p);
 Statement* parseWhileStatement(Parser &p);
+Statement* parseFunctionDeclaration(Parser &p);
+Statement* parseReturnStatement(Parser &p);
 
 Expression* parseExpression(Parser &p);
 Expression* parseBinaryExpression(Parser &p);
 Expression* parsePrimary(Parser &p);
+Expression* parseCallExpression(Parser &p, const std::string &funcName);
 
 bool isOperator(TokenType type);

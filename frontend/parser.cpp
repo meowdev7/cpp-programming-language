@@ -81,12 +81,24 @@ Statement* parseStatement(Parser &p)
 {
     Token t = current(p);
 
+    // Detect function declaration: fn <type> <name>(...)
+    if (t.type == TokenType::Function || (t.type == TokenType::Identifier && t.value == "fn"))
+    {
+        return parseFunctionDeclaration(p);
+    }
+
     if (t.type == TokenType::TypeInt ||
         t.type == TokenType::TypeFloat ||
         t.type == TokenType::TypeString ||
         t.type == TokenType::TypeBool)
     {
         return parseVariableDeclaration(p);
+    }
+
+    // Detect return statement
+    if (t.type == TokenType::Return || (t.type == TokenType::Identifier && t.value == "return"))
+    {
+        return parseReturnStatement(p);
     }
 
     // Detect print statement
@@ -110,13 +122,26 @@ Statement* parseStatement(Parser &p)
     // Detect assignment: identifier = expression
     if (t.type == TokenType::Identifier)
     {
-        // Look ahead to see if next token is =
+        // Look ahead to see if next token is (
         size_t savedPos = p.position;
         Token next = current(p);
         advance(p);
         Token afterNext = current(p);
         p.position = savedPos;  // Reset position
         
+        // Function call: identifier (
+        if (afterNext.type == TokenType::LeftParen)
+        {
+            Expression* expr = parseExpression(p);
+            consume(p, TokenType::Semicolon, "Expected ';' after expression");
+            // Wrap in expression statement - for now just evaluate and discard
+            auto* node = new AssignmentStatement();  // Temporary: wrap as assignment
+            node->name = "__expr_stmt__";
+            node->value.reset(expr);
+            return node;
+        }
+        
+        // Assignment: identifier =
         if (next.type == TokenType::Identifier && afterNext.type == TokenType::Equal)
         {
             return parseAssignment(p);
@@ -367,6 +392,21 @@ Expression* parseTerm(Parser &p)
 // Parse multiplication/division (highest arithmetic precedence)
 Expression* parseFactor(Parser &p)
 {
+    // Handle unary minus
+    if (current(p).type == TokenType::Minus)
+    {
+        advance(p);
+        Expression* operand = parsePrimary(p);
+        
+        auto* expr = new BinaryExpression();
+        auto* zero = new NumberLiteral();
+        zero->value = "0";
+        expr->left.reset(zero);
+        expr->op = "-";
+        expr->right.reset(operand);
+        return expr;
+    }
+    
     Expression* left = parsePrimary(p);
 
     while (current(p).type == TokenType::Star ||
@@ -427,6 +467,12 @@ Expression* parsePrimary(Parser &p)
     {
         advance(p);
 
+        // Check if this is a function call: identifier (
+        if (current(p).type == TokenType::LeftParen)
+        {
+            return parseCallExpression(p, t.value);
+        }
+
         auto* node = new Identifier();
         node->name = t.value;
         return node;
@@ -434,4 +480,114 @@ Expression* parsePrimary(Parser &p)
 
     error(t.line, t.column, "Unexpected token in expression");
     exit(1);
+}
+
+Statement* parseFunctionDeclaration(Parser &p)
+{
+    // Skip "fn" or "function" keyword
+    advance(p);
+    
+    // Get return type
+    Token returnType = consume(p, TokenType::TypeInt, "Expected return type");
+    
+    // Get function name
+    Token name = consume(p, TokenType::Identifier, "Expected function name");
+    
+    // Expect opening parenthesis
+    consume(p, TokenType::LeftParen, "Expected '(' after function name");
+    
+    // Parse parameters
+    std::vector<std::string> paramTypes;
+    std::vector<std::string> paramNames;
+    
+    if (current(p).type != TokenType::RightParen)
+    {
+        // First parameter
+        Token ptype = consume(p, TokenType::TypeInt, "Expected parameter type");
+        Token pname = consume(p, TokenType::Identifier, "Expected parameter name");
+        paramTypes.push_back(ptype.value);
+        paramNames.push_back(pname.value);
+        
+        // Additional parameters
+        while (current(p).type == TokenType::Comma)
+        {
+            advance(p);  // skip comma
+            ptype = consume(p, TokenType::TypeInt, "Expected parameter type");
+            pname = consume(p, TokenType::Identifier, "Expected parameter name");
+            paramTypes.push_back(ptype.value);
+            paramNames.push_back(pname.value);
+        }
+    }
+    
+    consume(p, TokenType::RightParen, "Expected ')' after parameters");
+    consume(p, TokenType::LeftBrace, "Expected '{' before function body");
+    
+    // Parse function body
+    std::vector<std::unique_ptr<Statement>> body;
+    while (current(p).type != TokenType::RightBrace)
+    {
+        Statement* stmt = parseStatement(p);
+        if (stmt)
+            body.emplace_back(stmt);
+    }
+    
+    consume(p, TokenType::RightBrace, "Expected '}' after function body");
+    
+    auto* node = new FunctionDeclaration();
+    node->returnType = returnType.value;
+    node->name = name.value;
+    node->paramTypes = paramTypes;
+    node->paramNames = paramNames;
+    for (auto& s : body)
+        node->body.emplace_back(std::move(s));
+    
+    return node;
+}
+
+Statement* parseReturnStatement(Parser &p)
+{
+    // Skip "return" keyword
+    advance(p);
+    
+    Expression* value = parseExpression(p);
+    
+    consume(p, TokenType::Semicolon, "Expected ';' after return value");
+    
+    auto* node = new ReturnStatement();
+    node->value.reset(value);
+    
+    return node;
+}
+
+Expression* parseCallExpression(Parser &p, const std::string& funcName)
+{
+    // We've already consumed the function name and '('
+    // Current token should be '('
+    
+    consume(p, TokenType::LeftParen, "Expected '(' in function call");
+    
+    // Parse arguments
+    std::vector<std::unique_ptr<Expression>> args;
+    
+    if (current(p).type != TokenType::RightParen)
+    {
+        Expression* arg = parseExpression(p);
+        args.emplace_back(arg);
+        
+        while (current(p).type == TokenType::Comma)
+        {
+            advance(p);  // skip comma
+            arg = parseExpression(p);
+            args.emplace_back(arg);
+        }
+    }
+    
+    consume(p, TokenType::RightParen, "Expected ')' after arguments");
+    
+    auto* node = new CallExpression();
+    node->name = funcName;
+    for (auto& a : args)
+        node->arguments.emplace_back(std::move(a));
+    
+    return node;
 }

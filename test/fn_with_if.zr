@@ -1,0 +1,9 @@
+fn int abs(int x) {
+    if (x < 0) {
+        return -x;
+    }
+    return x;
+}
+
+print(abs(-5));
+print(abs(3));

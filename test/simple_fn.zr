@@ -1,0 +1,5 @@
+fn int square(int x) {
+    return x * x;
+}
+
+print(square(4));

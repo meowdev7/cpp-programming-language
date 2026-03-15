@@ -80,6 +80,26 @@ struct WhileStatement : Statement
     std::vector<std::unique_ptr<Statement>> body;
 };
 
+struct ReturnStatement : Statement
+{
+    std::unique_ptr<Expression> value;
+};
+
+struct FunctionDeclaration : Statement
+{
+    std::string returnType;
+    std::string name;
+    std::vector<std::string> paramTypes;
+    std::vector<std::string> paramNames;
+    std::vector<std::unique_ptr<Statement>> body;
+};
+
+struct CallExpression : Expression
+{
+    std::string name;
+    std::vector<std::unique_ptr<Expression>> arguments;
+};
+
 struct Program : Node
 {
     std::vector<std::unique_ptr<Statement>> statements;

@@ -106,6 +106,7 @@ Token makeIdentifier(Lexer &lexer)
 
     if (value == "let") return makeToken(lexer, TokenType::Let, value);
     if (value == "const") return makeToken(lexer, TokenType::Const, value);
+    if (value == "fn") return makeToken(lexer, TokenType::Function, value);
     if (value == "function") return makeToken(lexer, TokenType::Function, value);
     if (value == "return") return makeToken(lexer, TokenType::Return, value);
     if (value == "if") return makeToken(lexer, TokenType::If, value);

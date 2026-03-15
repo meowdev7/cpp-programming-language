@@ -79,6 +79,13 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
 
     if (auto id = dynamic_cast<Identifier *>(expr))
     {
+        // First check scope stack (local variables)
+        if (!interp.scopeStack.empty() && interp.scopeStack.top().count(id->name) > 0)
+        {
+            return interp.scopeStack.top()[id->name];
+        }
+        
+        // Then check global variables
         if (interp.variables.count(id->name) == 0)
         {
             error(0,0,"Undefined variable: " + id->name);
@@ -86,6 +93,55 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
         }
 
         return interp.variables[id->name];
+    }
+
+    if (auto call = dynamic_cast<CallExpression *>(expr))
+    {
+        // Look up function
+        if (interp.functions.count(call->name) == 0)
+        {
+            error(0,0,"Undefined function: " + call->name);
+            exit(1);
+        }
+        
+        FunctionDeclaration* func = interp.functions[call->name];
+        
+        // Evaluate arguments FIRST (before pushing new scope, so they can see outer variables)
+        std::vector<Value> argValues;
+        for (auto& arg : call->arguments)
+        {
+            argValues.push_back(evaluateExpression(interp, arg.get()));
+        }
+        
+        // Push new scope
+        interp.scopeStack.push(std::unordered_map<std::string, Value>());
+        
+        // Bind parameters
+        for (size_t i = 0; i < func->paramNames.size() && i < argValues.size(); i++)
+        {
+            interp.scopeStack.top()[func->paramNames[i]] = argValues[i];
+        }
+        
+        // Execute function body
+        Value result;
+        result.type = ValueType::Null;
+        
+        try
+        {
+            for (auto& stmt : func->body)
+            {
+                executeStatement(interp, stmt.get());
+            }
+        }
+        catch (ReturnValue& ret)
+        {
+            result = ret.value;
+        }
+        
+        // Pop scope
+        interp.scopeStack.pop();
+        
+        return result;
     }
 
     if (auto bin = dynamic_cast<BinaryExpression *>(expr))
@@ -192,20 +248,40 @@ void executeStatement(Interpreter &interp, Statement *stmt)
                 executeStatement(interp, stmt.get());
             }
         }
+        // Don't return here - execution continues to subsequent statements in the function body
         return;
     }
 
     if (auto assign = dynamic_cast<AssignmentStatement *>(stmt))
     {
+        // Check if it's a wrapped expression statement
+        if (assign->name == "__expr_stmt__")
+        {
+            evaluateExpression(interp, assign->value.get());
+            return;
+        }
+        
         Value value = evaluateExpression(interp, assign->value.get());
         
-        if (interp.variables.count(assign->name) == 0)
+        // Check scope stack first, then global variables
+        bool found = false;
+        if (!interp.scopeStack.empty() && interp.scopeStack.top().count(assign->name) > 0)
+        {
+            interp.scopeStack.top()[assign->name] = value;
+            found = true;
+        }
+        else if (interp.variables.count(assign->name) > 0)
+        {
+            interp.variables[assign->name] = value;
+            found = true;
+        }
+        
+        if (!found)
         {
             error(0,0,"Undefined variable: " + assign->name);
             exit(1);
         }
         
-        interp.variables[assign->name] = value;
         return;
     }
 
@@ -230,6 +306,30 @@ void executeStatement(Interpreter &interp, Statement *stmt)
             }
         }
         return;
+    }
+
+    if (auto funcDecl = dynamic_cast<FunctionDeclaration *>(stmt))
+    {
+        // Store function in function table
+        interp.functions[funcDecl->name] = funcDecl;
+        return;
+    }
+
+    if (auto ret = dynamic_cast<ReturnStatement *>(stmt))
+    {
+        Value value = evaluateExpression(interp, ret->value.get());
+        throw ReturnValue{value};
+    }
+
+    // Handle function calls as expressions (for side effects)
+    if (auto assign = dynamic_cast<AssignmentStatement *>(stmt))
+    {
+        // Check if it's a wrapped expression statement
+        if (assign->name == "__expr_stmt__")
+        {
+            evaluateExpression(interp, assign->value.get());
+            return;
+        }
     }
 
     error(0,0,"Unknown statement");
