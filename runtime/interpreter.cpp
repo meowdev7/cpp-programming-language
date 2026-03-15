@@ -163,6 +163,7 @@ void executeStatement(Interpreter &interp, Statement *stmt)
         checkType(var->type, value);
 
         interp.variables[var->name] = value;
+        interp.varTypes[var->name] = var->type;  // Store declared type
 
         return;
     }
@@ -205,6 +206,29 @@ void executeStatement(Interpreter &interp, Statement *stmt)
         }
         
         interp.variables[assign->name] = value;
+        return;
+    }
+
+    if (auto whileStmt = dynamic_cast<WhileStatement *>(stmt))
+    {
+        while (true)
+        {
+            Value cond = evaluateExpression(interp, whileStmt->condition.get());
+            
+            if (cond.type != ValueType::Bool)
+            {
+                error(0,0,"Condition must be boolean");
+                exit(1);
+            }
+            
+            if (!std::get<bool>(cond.data))
+                break;
+            
+            for (auto& stmt : whileStmt->body)
+            {
+                executeStatement(interp, stmt.get());
+            }
+        }
         return;
     }
 

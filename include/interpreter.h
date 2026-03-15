@@ -21,6 +21,7 @@ struct Value
 struct Interpreter
 {
     std::unordered_map<std::string, Value> variables;
+    std::unordered_map<std::string, std::string> varTypes;  // Track declared types
 };
 
 Value evaluateExpression(Interpreter& interp, Expression* expr);

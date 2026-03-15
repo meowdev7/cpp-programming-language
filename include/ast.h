@@ -74,6 +74,12 @@ struct IfStatement : Statement
     std::vector<std::unique_ptr<Statement>> body;
 };
 
+struct WhileStatement : Statement
+{
+    std::unique_ptr<Expression> condition;
+    std::vector<std::unique_ptr<Statement>> body;
+};
+
 struct Program : Node
 {
     std::vector<std::unique_ptr<Statement>> statements;

@@ -101,6 +101,12 @@ Statement* parseStatement(Parser &p)
         return parseIfStatement(p);
     }
 
+    // Detect while statement
+    if ((t.type == TokenType::Identifier && t.value == "while") || t.type == TokenType::While)
+    {
+        return parseWhileStatement(p);
+    }
+
     // Detect assignment: identifier = expression
     if (t.type == TokenType::Identifier)
     {
@@ -250,6 +256,53 @@ Statement* parseAssignment(Parser &p)
     auto* node = new AssignmentStatement();
     node->name = nameToken.value;
     node->value.reset(value);
+    
+    return node;
+}
+
+Statement* parseWhileStatement(Parser &p)
+{
+    advance(p);  // skip "while"
+    
+    consume(
+        p,
+        TokenType::LeftParen,
+        "Expected '(' after 'while'"
+    );
+    
+    Expression* condition = parseExpression(p);
+    
+    consume(
+        p,
+        TokenType::RightParen,
+        "Expected ')' after condition"
+    );
+    
+    consume(
+        p,
+        TokenType::LeftBrace,
+        "Expected '{' after condition"
+    );
+    
+    // Parse body statements until }
+    std::vector<std::unique_ptr<Statement>> body;
+    while (current(p).type != TokenType::RightBrace)
+    {
+        Statement* stmt = parseStatement(p);
+        if (stmt)
+            body.emplace_back(stmt);
+    }
+    
+    consume(
+        p,
+        TokenType::RightBrace,
+        "Expected '}' after while body"
+    );
+    
+    auto* node = new WhileStatement();
+    node->condition.reset(condition);
+    for (auto& s : body)
+        node->body.emplace_back(std::move(s));
     
     return node;
 }
