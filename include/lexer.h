@@ -50,12 +50,18 @@ struct Token
 {
     TokenType type;
     std::string value;
+
+    int line;
+    int column;
 };
 
 struct Lexer
 {
     std::string source;
     size_t position = 0;
+
+    int line = 1;
+    int column = 1;
 };
 
 std::vector<Token> lex(Lexer &lexer);

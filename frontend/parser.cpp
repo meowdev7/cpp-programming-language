@@ -1,8 +1,14 @@
 #include "parser.h"
+#include "error.h"
 #include <iostream>
 
 Token current(Parser &p)
 {
+    // If we've gone past the end of the token list, return the last token (which should be EndOfFile)
+    
+    if (p.position >= p.tokens.size())
+        return p.tokens.back();
+
     return p.tokens[p.position];
 }
 
@@ -23,6 +29,15 @@ bool match(Parser &p, TokenType type)
     }
 
     return false;
+}
+
+Token consume(Parser& p, TokenType type, const std::string& msg)
+{
+    if (current(p).type == type)
+        return advance(p);
+
+    error(current(p).line, current(p).column, msg);
+    exit(1);
 }
 
 bool isOperator(TokenType type)
@@ -60,35 +75,33 @@ Statement* parseStatement(Parser &p)
         return parseVariableDeclaration(p);
     }
 
-    std::cerr << "Unknown statement\n";
+    error(t.line, t.column, "Unknown statement");
     return nullptr;
 }
 
 Statement* parseVariableDeclaration(Parser &p)
 {
-    Token typeToken = current(p);
-    advance(p);
+    Token typeToken = advance(p);
 
-    Token nameToken = current(p);
+    Token nameToken = consume(
+        p,
+        TokenType::Identifier,
+        "Expected variable name after type"
+    );
 
-    if (nameToken.type != TokenType::Identifier)
-    {
-        std::cerr << "Expected identifier\n";
-        return nullptr;
-    }
-
-    advance(p);
-
-    if (!match(p, TokenType::Equal))
-    {
-        std::cerr << "Expected '=' after variable name\n";
-        return nullptr;
-    }
+    consume(
+        p,
+        TokenType::Equal,
+        "Expected '=' after variable name"
+    );
 
     Expression* value = parseExpression(p);
 
-    if (!match(p, TokenType::Semicolon))
-        std::cerr << "Expected ';'\n";
+    consume(
+        p,
+        TokenType::Semicolon,
+        "Expected ';' after declaration"
+    );
 
     auto* node = new VariableDeclaration();
     node->type = typeToken.value;
@@ -109,8 +122,7 @@ Expression* parseBinaryExpression(Parser &p)
 
     while (isOperator(current(p).type))
     {
-        Token op = current(p);
-        advance(p);
+        Token op = advance(p);
 
         Expression* right = parsePrimary(p);
 
@@ -135,7 +147,6 @@ Expression* parsePrimary(Parser &p)
 
         auto* node = new NumberLiteral();
         node->value = t.value;
-
         return node;
     }
 
@@ -145,7 +156,6 @@ Expression* parsePrimary(Parser &p)
 
         auto* node = new StringLiteral();
         node->value = t.value;
-
         return node;
     }
 
@@ -155,10 +165,9 @@ Expression* parsePrimary(Parser &p)
 
         auto* node = new Identifier();
         node->name = t.value;
-
         return node;
     }
 
-    std::cerr << "Unexpected token in expression\n";
-    return nullptr;
+    error(t.line, t.column, "Unexpected token in expression");
+    exit(1);
 }
