@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <variant>
 
 std::string formatNumber(double value)
 {
@@ -39,11 +40,31 @@ void checkType(const std::string& declared, const Value& value)
     }
 }
 
+std::string valueToString(const Value& v)
+{
+    if (v.type == ValueType::Number)
+    {
+        double num = std::get<double>(v.data);
+        if (num == static_cast<long long>(num))
+            return std::to_string(static_cast<long long>(num));
+        return formatNumber(num);
+    }
+    else if (v.type == ValueType::String)
+    {
+        return std::get<std::string>(v.data);
+    }
+    else if (v.type == ValueType::Bool)
+    {
+        return std::get<bool>(v.data) ? "true" : "false";
+    }
+    return "";
+}
+
 Value evaluateExpression(Interpreter &interp, Expression *expr)
 {
     if (auto num = dynamic_cast<NumberLiteral *>(expr))
     {
-        return {ValueType::Number, num->value};
+        return {ValueType::Number, std::stod(num->value)};
     }
 
     if (auto str = dynamic_cast<StringLiteral *>(expr))
@@ -53,7 +74,7 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
 
     if (auto b = dynamic_cast<BooleanLiteral *>(expr))
     {
-        return {ValueType::Bool, b->value ? "true" : "false"};
+        return {ValueType::Bool, b->value};
     }
 
     if (auto id = dynamic_cast<Identifier *>(expr))
@@ -87,8 +108,8 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
 
             if (left.type == ValueType::Number)
             {
-                double a = std::stod(left.value);
-                double b = std::stod(right.value);
+                double a = std::get<double>(left.data);
+                double b = std::get<double>(right.data);
 
                 if (bin->op == "==") result = (a == b);
                 else if (bin->op == "!=") result = (a != b);
@@ -99,12 +120,14 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
             }
             else if (left.type == ValueType::String)
             {
-                if (bin->op == "==") result = (left.value == right.value);
-                else if (bin->op == "!=") result = (left.value != right.value);
+                const std::string& a = std::get<std::string>(left.data);
+                const std::string& b = std::get<std::string>(right.data);
+                if (bin->op == "==") result = (a == b);
+                else if (bin->op == "!=") result = (a != b);
                 else { error(0,0,"Cannot use comparison on strings"); exit(1); }
             }
 
-            return {ValueType::Bool, result ? "true" : "false"};
+            return {ValueType::Bool, result};
         }
 
         // Arithmetic operators
@@ -114,8 +137,8 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
             exit(1);
         }
 
-        double a = std::stod(left.value);
-        double b = std::stod(right.value);
+        double a = std::get<double>(left.data);
+        double b = std::get<double>(right.data);
         double result;
 
         if (bin->op == "+") result = a + b;
@@ -124,11 +147,7 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
         else if (bin->op == "/") result = a / b;
         else { error(0,0,"Unknown operator"); exit(1); }
 
-        // Format: show as integer if whole number, otherwise as float
-        if (result == static_cast<long long>(result))
-            return {ValueType::Number, std::to_string(static_cast<long long>(result))};
-        else
-            return {ValueType::Number, formatNumber(result)};
+        return {ValueType::Number, result};
     }
 
     error(0,0,"Unknown expression");
@@ -151,7 +170,7 @@ void executeStatement(Interpreter &interp, Statement *stmt)
     if (auto print = dynamic_cast<PrintStatement *>(stmt))
     {
         Value value = evaluateExpression(interp, print->value.get());
-        std::cout << value.value << std::endl;
+        std::cout << valueToString(value) << std::endl;
         return;
     }
 
@@ -171,6 +190,6 @@ void executeProgram(Interpreter &interp, Program &program)
 
     for (auto &v : interp.variables)
     {
-        std::cout << v.first << " = " << v.second.value << std::endl;
+        std::cout << v.first << " = " << valueToString(v.second) << std::endl;
     }
 }

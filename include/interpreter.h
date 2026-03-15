@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <variant>
 #include "ast.h"
 
 enum class ValueType
@@ -14,7 +15,7 @@ enum class ValueType
 struct Value
 {
     ValueType type;
-    std::string value;
+    std::variant<double, std::string, bool> data;
 };
 
 struct Interpreter
