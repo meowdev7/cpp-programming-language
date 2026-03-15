@@ -100,6 +100,17 @@ struct CallExpression : Expression
     std::vector<std::unique_ptr<Expression>> arguments;
 };
 
+struct ArrayLiteral : Expression
+{
+    std::vector<std::unique_ptr<Expression>> elements;
+};
+
+struct IndexExpression : Expression
+{
+    std::unique_ptr<Expression> array;
+    std::unique_ptr<Expression> index;
+};
+
 struct Program : Node
 {
     std::vector<std::unique_ptr<Statement>> statements;

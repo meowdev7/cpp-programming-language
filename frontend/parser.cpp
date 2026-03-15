@@ -61,6 +61,8 @@ bool isOperator(TokenType type)
 Expression* parseComparison(Parser &p);
 Expression* parseTerm(Parser &p);
 Expression* parseFactor(Parser &p);
+Expression* parseArrayLiteral(Parser &p);
+Expression* parseIndexExpression(Parser &p, const std::string& varName);
 
 Program parseProgram(Parser &p)
 {
@@ -467,6 +469,12 @@ Expression* parsePrimary(Parser &p)
     {
         advance(p);
 
+        // Check if this is indexing: identifier [
+        if (current(p).type == TokenType::LeftBracket)
+        {
+            return parseIndexExpression(p, t.value);
+        }
+
         // Check if this is a function call: identifier (
         if (current(p).type == TokenType::LeftParen)
         {
@@ -476,6 +484,12 @@ Expression* parsePrimary(Parser &p)
         auto* node = new Identifier();
         node->name = t.value;
         return node;
+    }
+
+    // Array literal: [1, 2, 3]
+    if (t.type == TokenType::LeftBracket)
+    {
+        return parseArrayLiteral(p);
     }
 
     error(t.line, t.column, "Unexpected token in expression");
@@ -588,6 +602,52 @@ Expression* parseCallExpression(Parser &p, const std::string& funcName)
     node->name = funcName;
     for (auto& a : args)
         node->arguments.emplace_back(std::move(a));
+    
+    return node;
+}
+
+Expression* parseArrayLiteral(Parser &p)
+{
+    advance(p);  // skip '['
+    
+    std::vector<std::unique_ptr<Expression>> elements;
+    
+    if (current(p).type != TokenType::RightBracket)
+    {
+        Expression* elem = parseExpression(p);
+        elements.emplace_back(elem);
+        
+        while (current(p).type == TokenType::Comma)
+        {
+            advance(p);  // skip comma
+            elem = parseExpression(p);
+            elements.emplace_back(elem);
+        }
+    }
+    
+    consume(p, TokenType::RightBracket, "Expected ']' after array elements");
+    
+    auto* node = new ArrayLiteral();
+    for (auto& e : elements)
+        node->elements.emplace_back(std::move(e));
+    
+    return node;
+}
+
+Expression* parseIndexExpression(Parser &p, const std::string& varName)
+{
+    // We've consumed the identifier, current is '['
+    advance(p);  // skip '['
+    
+    Expression* index = parseExpression(p);
+    
+    consume(p, TokenType::RightBracket, "Expected ']' after index");
+    
+    auto* node = new IndexExpression();
+    auto* id = new Identifier();
+    id->name = varName;
+    node->array.reset(id);
+    node->index.reset(index);
     
     return node;
 }

@@ -196,6 +196,8 @@ std::string tokenTypeToString(TokenType type)
         case TokenType::RightParen: return "RPAREN";
         case TokenType::LeftBrace: return "LBRACE";
         case TokenType::RightBrace: return "RBRACE";
+        case TokenType::LeftBracket: return "LBRACKET";
+        case TokenType::RightBracket: return "RBRACKET";
 
         case TokenType::Semicolon: return "SEMICOLON";
         case TokenType::Comma: return "COMMA";
@@ -340,6 +342,14 @@ std::vector<Token> lex(Lexer &lexer)
 
             case '}':
                 tokens.push_back(makeToken(lexer, TokenType::RightBrace, "}"));
+                break;
+
+            case '[':
+                tokens.push_back(makeToken(lexer, TokenType::LeftBracket, "["));
+                break;
+
+            case ']':
+                tokens.push_back(makeToken(lexer, TokenType::RightBracket, "]"));
                 break;
 
             case ';':

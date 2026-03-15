@@ -4,6 +4,7 @@
 #include <string>
 #include <variant>
 #include <stack>
+#include <vector>
 #include "ast.h"
 
 enum class ValueType
@@ -11,13 +12,14 @@ enum class ValueType
     Number,
     String,
     Bool,
-    Null
+    Null,
+    Array
 };
 
 struct Value
 {
     ValueType type = ValueType::Null;
-    std::variant<double, std::string, bool> data;
+    std::variant<double, std::string, bool, std::vector<Value>> data;
 };
 
 // For function return values

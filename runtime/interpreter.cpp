@@ -21,9 +21,10 @@ std::string formatNumber(double value)
 
 void checkType(const std::string& declared, const Value& value)
 {
+    // For now, only check types for simple types, allow arrays
     if (declared == "int" || declared == "float")
     {
-        if (value.type != ValueType::Number)
+        if (value.type != ValueType::Number && value.type != ValueType::Array)
         {
             error(0,0,"Type error: expected number");
             exit(1);
@@ -35,6 +36,15 @@ void checkType(const std::string& declared, const Value& value)
         if (value.type != ValueType::String)
         {
             error(0,0,"Type error: expected string");
+            exit(1);
+        }
+    }
+
+    if (declared == "bool")
+    {
+        if (value.type != ValueType::Bool)
+        {
+            error(0,0,"Type error: expected bool");
             exit(1);
         }
     }
@@ -56,6 +66,18 @@ std::string valueToString(const Value& v)
     else if (v.type == ValueType::Bool)
     {
         return std::get<bool>(v.data) ? "true" : "false";
+    }
+    else if (v.type == ValueType::Array)
+    {
+        auto& arr = std::get<std::vector<Value>>(v.data);
+        std::string result = "[";
+        for (size_t i = 0; i < arr.size(); i++)
+        {
+            if (i > 0) result += ", ";
+            result += valueToString(arr[i]);
+        }
+        result += "]";
+        return result;
     }
     return "";
 }
@@ -204,6 +226,45 @@ Value evaluateExpression(Interpreter &interp, Expression *expr)
         else { error(0,0,"Unknown operator"); exit(1); }
 
         return {ValueType::Number, result};
+    }
+
+    if (auto arr = dynamic_cast<ArrayLiteral *>(expr))
+    {
+        std::vector<Value> elements;
+        for (auto& elem : arr->elements)
+        {
+            elements.push_back(evaluateExpression(interp, elem.get()));
+        }
+        return {ValueType::Array, elements};
+    }
+
+    if (auto idx = dynamic_cast<IndexExpression *>(expr))
+    {
+        Value arr = evaluateExpression(interp, idx->array.get());
+        Value indexVal = evaluateExpression(interp, idx->index.get());
+        
+        if (arr.type != ValueType::Array)
+        {
+            error(0,0,"Cannot index non-array");
+            exit(1);
+        }
+        
+        if (indexVal.type != ValueType::Number)
+        {
+            error(0,0,"Array index must be a number");
+            exit(1);
+        }
+        
+        int index = static_cast<int>(std::get<double>(indexVal.data));
+        auto& vec = std::get<std::vector<Value>>(arr.data);
+        
+        if (index < 0 || index >= static_cast<int>(vec.size()))
+        {
+            error(0,0,"Array index out of bounds");
+            exit(1);
+        }
+        
+        return vec[index];
     }
 
     error(0,0,"Unknown expression");
