@@ -41,3 +41,7 @@ Value evaluateExpression(Interpreter& interp, Expression* expr);
 void executeStatement(Interpreter& interp, Statement* stmt);
 
 void executeProgram(Interpreter& interp, Program& program);
+
+// Utility functions
+std::string valueToString(const Value& v);
+void checkType(const std::string& declared, const Value& value);

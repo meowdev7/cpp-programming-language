@@ -10,4 +10,5 @@ fn int add(int a, int b) {
 
 if (x >= 10) {
     string msg = "hello";
+    print(add(2, 3)); print(msg);
 }

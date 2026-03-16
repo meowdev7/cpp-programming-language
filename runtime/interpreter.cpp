@@ -1,287 +1,15 @@
 #include "interpreter.h"
 #include "error.h"
-
 #include <iostream>
-#include <iomanip>
-#include <variant>
-
-std::string formatNumber(double value)
-{
-    std::string s = std::to_string(value);
-    // Remove trailing zeros but keep at least one decimal place if it's a float
-    while (!s.empty() && s.back() == '0' && s.find('.') != std::string::npos) {
-        s.pop_back();
-    }
-    // If we removed the last digit after decimal, keep one zero
-    if (!s.empty() && s.back() == '.') {
-        s.push_back('0');
-    }
-    return s;
-}
-
-void checkType(const std::string& declared, const Value& value)
-{
-    // For now, only check types for simple types, allow arrays
-    if (declared == "int" || declared == "float")
-    {
-        if (value.type != ValueType::Number && value.type != ValueType::Array)
-        {
-            error(0,0,"Type error: expected number");
-            exit(1);
-        }
-    }
-
-    if (declared == "string")
-    {
-        if (value.type != ValueType::String)
-        {
-            error(0,0,"Type error: expected string");
-            exit(1);
-        }
-    }
-
-    if (declared == "bool")
-    {
-        if (value.type != ValueType::Bool)
-        {
-            error(0,0,"Type error: expected bool");
-            exit(1);
-        }
-    }
-}
-
-std::string valueToString(const Value& v)
-{
-    if (v.type == ValueType::Number)
-    {
-        double num = std::get<double>(v.data);
-        if (num == static_cast<long long>(num))
-            return std::to_string(static_cast<long long>(num));
-        return formatNumber(num);
-    }
-    else if (v.type == ValueType::String)
-    {
-        return std::get<std::string>(v.data);
-    }
-    else if (v.type == ValueType::Bool)
-    {
-        return std::get<bool>(v.data) ? "true" : "false";
-    }
-    else if (v.type == ValueType::Array)
-    {
-        auto& arr = std::get<std::vector<Value>>(v.data);
-        std::string result = "[";
-        for (size_t i = 0; i < arr.size(); i++)
-        {
-            if (i > 0) result += ", ";
-            result += valueToString(arr[i]);
-        }
-        result += "]";
-        return result;
-    }
-    return "";
-}
-
-Value evaluateExpression(Interpreter &interp, Expression *expr)
-{
-    if (auto num = dynamic_cast<NumberLiteral *>(expr))
-    {
-        return {ValueType::Number, std::stod(num->value)};
-    }
-
-    if (auto str = dynamic_cast<StringLiteral *>(expr))
-    {
-        return {ValueType::String, str->value};
-    }
-
-    if (auto b = dynamic_cast<BooleanLiteral *>(expr))
-    {
-        return {ValueType::Bool, b->value};
-    }
-
-    if (auto id = dynamic_cast<Identifier *>(expr))
-    {
-        // First check scope stack (local variables)
-        if (!interp.scopeStack.empty() && interp.scopeStack.top().count(id->name) > 0)
-        {
-            return interp.scopeStack.top()[id->name];
-        }
-        
-        // Then check global variables
-        if (interp.variables.count(id->name) == 0)
-        {
-            error(0,0,"Undefined variable: " + id->name);
-            exit(1);
-        }
-
-        return interp.variables[id->name];
-    }
-
-    if (auto call = dynamic_cast<CallExpression *>(expr))
-    {
-        // Look up function
-        if (interp.functions.count(call->name) == 0)
-        {
-            error(0,0,"Undefined function: " + call->name);
-            exit(1);
-        }
-        
-        FunctionDeclaration* func = interp.functions[call->name];
-        
-        // Evaluate arguments FIRST (before pushing new scope, so they can see outer variables)
-        std::vector<Value> argValues;
-        for (auto& arg : call->arguments)
-        {
-            argValues.push_back(evaluateExpression(interp, arg.get()));
-        }
-        
-        // Push new scope
-        interp.scopeStack.push(std::unordered_map<std::string, Value>());
-        
-        // Bind parameters
-        for (size_t i = 0; i < func->paramNames.size() && i < argValues.size(); i++)
-        {
-            interp.scopeStack.top()[func->paramNames[i]] = argValues[i];
-        }
-        
-        // Execute function body
-        Value result;
-        result.type = ValueType::Null;
-        
-        try
-        {
-            for (auto& stmt : func->body)
-            {
-                executeStatement(interp, stmt.get());
-            }
-        }
-        catch (ReturnValue& ret)
-        {
-            result = ret.value;
-        }
-        
-        // Pop scope
-        interp.scopeStack.pop();
-        
-        return result;
-    }
-
-    if (auto bin = dynamic_cast<BinaryExpression *>(expr))
-    {
-        Value left = evaluateExpression(interp, bin->left.get());
-        Value right = evaluateExpression(interp, bin->right.get());
-
-        // Comparison operators
-        if (bin->op == "==" || bin->op == "!=" || bin->op == ">" || 
-            bin->op == "<" || bin->op == ">=" || bin->op == "<=")
-        {
-            // For comparisons, both must be same type
-            if (left.type != right.type)
-            {
-                error(0,0,"Cannot compare different types");
-                exit(1);
-            }
-
-            bool result = false;
-
-            if (left.type == ValueType::Number)
-            {
-                double a = std::get<double>(left.data);
-                double b = std::get<double>(right.data);
-
-                if (bin->op == "==") result = (a == b);
-                else if (bin->op == "!=") result = (a != b);
-                else if (bin->op == ">") result = (a > b);
-                else if (bin->op == "<") result = (a < b);
-                else if (bin->op == ">=") result = (a >= b);
-                else if (bin->op == "<=") result = (a <= b);
-            }
-            else if (left.type == ValueType::String)
-            {
-                const std::string& a = std::get<std::string>(left.data);
-                const std::string& b = std::get<std::string>(right.data);
-                if (bin->op == "==") result = (a == b);
-                else if (bin->op == "!=") result = (a != b);
-                else { error(0,0,"Cannot use comparison on strings"); exit(1); }
-            }
-
-            return {ValueType::Bool, result};
-        }
-
-        // Arithmetic operators
-        if (left.type != ValueType::Number || right.type != ValueType::Number)
-        {
-            error(0,0,"Arithmetic requires numbers");
-            exit(1);
-        }
-
-        double a = std::get<double>(left.data);
-        double b = std::get<double>(right.data);
-        double result;
-
-        if (bin->op == "+") result = a + b;
-        else if (bin->op == "-") result = a - b;
-        else if (bin->op == "*") result = a * b;
-        else if (bin->op == "/") result = a / b;
-        else { error(0,0,"Unknown operator"); exit(1); }
-
-        return {ValueType::Number, result};
-    }
-
-    if (auto arr = dynamic_cast<ArrayLiteral *>(expr))
-    {
-        std::vector<Value> elements;
-        for (auto& elem : arr->elements)
-        {
-            elements.push_back(evaluateExpression(interp, elem.get()));
-        }
-        return {ValueType::Array, elements};
-    }
-
-    if (auto idx = dynamic_cast<IndexExpression *>(expr))
-    {
-        Value arr = evaluateExpression(interp, idx->array.get());
-        Value indexVal = evaluateExpression(interp, idx->index.get());
-        
-        if (arr.type != ValueType::Array)
-        {
-            error(0,0,"Cannot index non-array");
-            exit(1);
-        }
-        
-        if (indexVal.type != ValueType::Number)
-        {
-            error(0,0,"Array index must be a number");
-            exit(1);
-        }
-        
-        int index = static_cast<int>(std::get<double>(indexVal.data));
-        auto& vec = std::get<std::vector<Value>>(arr.data);
-        
-        if (index < 0 || index >= static_cast<int>(vec.size()))
-        {
-            error(0,0,"Array index out of bounds");
-            exit(1);
-        }
-        
-        return vec[index];
-    }
-
-    error(0,0,"Unknown expression");
-    exit(1);
-}
 
 void executeStatement(Interpreter &interp, Statement *stmt)
 {
     if (auto var = dynamic_cast<VariableDeclaration *>(stmt))
     {
         Value value = evaluateExpression(interp, var->value.get());
-
         checkType(var->type, value);
-
         interp.variables[var->name] = value;
-        interp.varTypes[var->name] = var->type;  // Store declared type
-
+        interp.varTypes[var->name] = var->type;
         return;
     }
 
@@ -305,17 +33,13 @@ void executeStatement(Interpreter &interp, Statement *stmt)
         if (std::get<bool>(cond.data))
         {
             for (auto& stmt : ifStmt->body)
-            {
                 executeStatement(interp, stmt.get());
-            }
         }
-        // Don't return here - execution continues to subsequent statements in the function body
         return;
     }
 
     if (auto assign = dynamic_cast<AssignmentStatement *>(stmt))
     {
-        // Check if it's a wrapped expression statement
         if (assign->name == "__expr_stmt__")
         {
             evaluateExpression(interp, assign->value.get());
@@ -324,7 +48,6 @@ void executeStatement(Interpreter &interp, Statement *stmt)
         
         Value value = evaluateExpression(interp, assign->value.get());
         
-        // Check scope stack first, then global variables
         bool found = false;
         if (!interp.scopeStack.empty() && interp.scopeStack.top().count(assign->name) > 0)
         {
@@ -342,7 +65,6 @@ void executeStatement(Interpreter &interp, Statement *stmt)
             error(0,0,"Undefined variable: " + assign->name);
             exit(1);
         }
-        
         return;
     }
 
@@ -362,16 +84,13 @@ void executeStatement(Interpreter &interp, Statement *stmt)
                 break;
             
             for (auto& stmt : whileStmt->body)
-            {
                 executeStatement(interp, stmt.get());
-            }
         }
         return;
     }
 
     if (auto funcDecl = dynamic_cast<FunctionDeclaration *>(stmt))
     {
-        // Store function in function table
         interp.functions[funcDecl->name] = funcDecl;
         return;
     }
@@ -382,10 +101,8 @@ void executeStatement(Interpreter &interp, Statement *stmt)
         throw ReturnValue{value};
     }
 
-    // Handle function calls as expressions (for side effects)
     if (auto assign = dynamic_cast<AssignmentStatement *>(stmt))
     {
-        // Check if it's a wrapped expression statement
         if (assign->name == "__expr_stmt__")
         {
             evaluateExpression(interp, assign->value.get());
@@ -400,15 +117,10 @@ void executeStatement(Interpreter &interp, Statement *stmt)
 void executeProgram(Interpreter &interp, Program &program)
 {
     for (auto &stmt : program.statements)
-    {
         executeStatement(interp, stmt.get());
-    }
 
-    // debug output
     std::cout << "\n--- Variables ---\n";
 
     for (auto &v : interp.variables)
-    {
         std::cout << v.first << " = " << valueToString(v.second) << std::endl;
-    }
 }

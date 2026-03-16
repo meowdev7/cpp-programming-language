@@ -1,1 +1,1 @@
-./build/zor test/test.zr
+./build/zor test/syntax.zr
