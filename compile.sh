@@ -1,1 +1,0 @@
-g++ main.cpp frontend/*.cpp runtime/*.cpp -Iinclude -o build/zor
