@@ -1,0 +1,3 @@
+print("this should \n have a newline");
+print("this should have a \" quotation mark");
+print("this should give an error \e ");

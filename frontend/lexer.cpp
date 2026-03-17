@@ -140,6 +140,19 @@ Token makeString(Lexer &lexer)
             error(lexer.line, lexer.column, "Unterminated string literal");
             break;
         }
+        // escape sequences
+        if (c == '\\') 
+        { 
+            switch (advance(lexer))
+            {
+              case 'n': value += '\n'; break;
+              case 't': value += '\t'; break;
+              case 'r': value += '\r'; break;
+              case '"': value += '"'; break;
+              default: error(lexer.line, lexer.column, "Unknown escape sequence"); break;
+            }
+            c = advance(lexer);
+        }
 
         if (c == '"')
             break;
